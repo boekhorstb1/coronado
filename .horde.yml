@@ -1,0 +1,39 @@
+---
+id: coronado
+name: Coronado
+full: Vaccination Queue Management
+description: |
+  This app started out as a quick stop-gap measure to help manage vaccination appointments during the corona epidemic. It gives out queue tickets distributed among available slots, following some basic rules. One of the main goals is to avoid large crouds waiting out in the cold or in narrow waiting rooms. Implemented as a horde module, it is also an exercise in applying the modernized framework design of the upcoming H6.
+list: ~
+type: application
+authors:
+  -
+    name: Ralf Lang
+    user: rlang
+    email: lang@b1-systems.de
+    active: true
+    role: lead
+version:
+  release: 1.0.0alpha1
+  api: 1.0.0alpha1
+state:
+  release: alpha
+  api: alpha
+license:
+  identifier: GPL
+  uri: https://www.horde.org/licenses/gpl
+dependencies:
+  required:
+    php: ^7.4 || ^8
+    horde/horde: ^6
+    horde/core: ^3
+    horde/db: ^3
+    horde/log: ^3
+    horde/routes: ^3
+    horde/http_server: ^1
+  optional:
+    composer:
+      horde/test: ^3
+  dev:
+    composer:
+      horde/test: ^3

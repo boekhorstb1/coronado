@@ -1,0 +1,44 @@
+{
+    "name": "horde/coronado",
+    "description": "Vaccination Queue Management",
+    "type": "horde-application",
+    "homepage": "https://www.horde.org",
+    "license": "GPL",
+    "authors": [
+        {
+            "name": "Ralf Lang",
+            "email": "lang@b1-systems.de",
+            "role": "lead"
+        }
+    ],
+    "time": "2021-11-26",
+    "repositories": [
+        {
+            "type": "composer",
+            "url": "https://horde-satis.maintaina.com/"
+        }
+    ],
+    "require": {
+        "horde/horde-installer-plugin": "*",
+        "php": "^7.4 || ^8"
+    },
+    "require-dev": {
+        "horde/test": "^3"
+    },
+    "suggest": {
+        "horde/test": "^3"
+    },
+    "autoload": {
+        "psr-0": {
+            "Coronado": "lib/"
+        },
+        "psr-4": {
+            "Horde\\Coronado\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Horde\\Coronado\\Test\\": "test/"
+        }
+    }
+}

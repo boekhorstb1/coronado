@@ -1,0 +1,14 @@
+/* Sidebar menu */
+.coronado-list {
+    background-image: url("graphics/user.png");
+}
+
+/* Button bar */
+.coronado-delete {
+    background-image: url("graphics/delete.png");
+}
+
+/* List table */
+.horde-table {
+    width: 100%;
+}
