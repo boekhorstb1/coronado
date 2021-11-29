@@ -18,12 +18,13 @@ class CoronadoBaseTables extends Horde_Db_Migration_Base
      */
     public function up()
     {
-        $t = $this->createTable('coronado_items', array('autoincrementKey' => 'item_id'));
-        $t->column('item_owner', 'string', array('limit' => 255, 'null' => false));
-        $t->column('item_data', 'string', array('limit' => 64, 'null' => false));
+        $t = $this->createTable('coronado_tickets', ['autoincrementKey' => 'ticket_id']);
+        $t->column('ticket_code', 'string', ['limit' => 32, 'null' => false]);
+        $t->column('ticket_date', 'int', ['limit' => 11, 'null' => false]);
+        $t->column('ticket_owner', 'string', ['limit' => 255, 'null' => false, 'default' => '']);
         $t->end();
 
-        $this->addIndex('coronado_items', array('item_owner'));
+        $this->addIndex('coronado_tickets', array('ticket_owner'));
     }
 
     /**
@@ -31,6 +32,6 @@ class CoronadoBaseTables extends Horde_Db_Migration_Base
      */
     public function down()
     {
-        $this->dropTable('coronado_items');
+        $this->dropTable('coronado_tickets');
     }
 }

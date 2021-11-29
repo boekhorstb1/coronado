@@ -64,6 +64,8 @@ class Application extends Horde_Registry_Application
     protected function _bootstrap()
     {
         $GLOBALS['injector']->bindFactory('Coronado_Driver', 'Coronado_Factory_Driver', 'create');
+        $GLOBALS['injector']->setInstance('Psr\Http\Message\StreamFactoryInterface', new Horde\Http\StreamFactory);
+        $GLOBALS['injector']->setInstance('Psr\Http\Message\ResponseFactoryInterface', new Horde\Http\ResponseFactory);
     }
 
     /**
