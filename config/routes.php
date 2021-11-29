@@ -18,6 +18,7 @@ $mapper->connect(
     '/rest/ticket',
     [
         'controller' => Ui\RestGetTicket::class,
+        'stack' => []
     ]
 );
 
@@ -28,5 +29,6 @@ $mapper->connect(
     '/*path',
     [
         'controller' => Ui\PublicUi::class,
+        'stack' => []
     ]
 );

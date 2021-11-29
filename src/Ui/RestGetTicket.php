@@ -40,13 +40,12 @@ class RestGetTicket extends RestBase
      * Quick & Dirty: Use $this->injector to get application services
      * Proper: Overload and amend constructor
      */
-    /*
     protected function buildResponseStream(ServerRequestInterface $request): ?StreamInterface
     {
         $content = json_encode([
             'ticket' => [
                 'ticket_id' => 'XYZ0XYZ1XYZ0XYZ1XYZ0XYZ1XYZ0XYZ1',
-                'ticket_time' => new \Horde_Date('2021-11-24 10:30', 'UTC')
+                'ticket_time' => (string) new \Horde_Date('2021-11-24 10:30', 'UTC')
             ]
         ]);
         if ($content) {
@@ -54,5 +53,4 @@ class RestGetTicket extends RestBase
         }
         throw new CoronadoException('Could not render rest output');
     }
-    */
 }
