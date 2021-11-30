@@ -1,15 +1,21 @@
 <?php
+
 /**
  * Coronado REST
  *
  * This is the base class for REST calls
  */
+
 declare(strict_types=1);
+
 namespace Horde\Coronado\Ui;
+
 use Horde\Injector\Injector;
+
 /**
  * The standard PSR-7/PSR-15/PSR-17 fare.
  */
+
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -118,7 +124,7 @@ abstract class RestBase implements MiddlewareInterface
 
     /**
      * Overload this method for actually implementing stuff
-     * 
+     *
      * Quick & Dirty: Use $this->injector to get application services
      * Proper: Overload and amend constructor
      */
@@ -135,6 +141,6 @@ abstract class RestBase implements MiddlewareInterface
 
     protected function handleNativeException(CoronadoException $e, $request): ?StreamInterface
     {
-        return $this->streamFactory->createStream('An error occured: ');
+        return $this->streamFactory->createStream("An error occured: $e");
     }
 }

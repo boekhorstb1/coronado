@@ -1,18 +1,24 @@
 <?php
+
 /**
  * Coronado Public UI
  *
  * This is the page where the anonymous user requests his ticket.
  */
+
 declare(strict_types=1);
+
 namespace Horde\Coronado\Ui;
 
 use Horde\Coronado\Ui\RestBase;
+use Horde\Coronado\TicketReserver;
 // These are all technically not needed but may help you write code faster
 use Horde\Injector\Injector;
+
 /**
  * The standard PSR-7/PSR-15/PSR-17 fare.
  */
+
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -25,32 +31,76 @@ use Horde_Registry;
 use Horde_Session;
 use Horde\Log\Logger;
 
-
-
-
 /**
  * Controller class for Public UI
  */
 class RestGetTicket extends RestBase
 {
-    
-    /**
-     * Overload this method for actually implementing stuff
-     * 
-     * Quick & Dirty: Use $this->injector to get application services
-     * Proper: Overload and amend constructor
-     */
+    protected function getResponseStream(array $data)
+    {
+        return $this->streamFactory->createStream(json_encode($data));
+    }
+
     protected function buildResponseStream(ServerRequestInterface $request): ?StreamInterface
     {
-        $content = json_encode([
-            'ticket' => [
-                'ticket_id' => 'XYZ0XYZ1XYZ0XYZ1XYZ0XYZ1XYZ0XYZ1',
-                'ticket_time' => (string) new \Horde_Date('2021-11-24 10:30', 'UTC')
-            ]
-        ]);
-        if ($content) {
-            return $this->streamFactory->createStream($content);
+        $method = $request->getMethod();
+        if ($method !== "POST") {
+            return $this->getResponseStream(
+                ['error' => 'request method needs to be post']
+            );
         }
-        throw new CoronadoException('Could not render rest output');
+        $body = $request->getBody()->getContents();
+        $data = json_decode($body, true);
+        $requiredKeys = ['firstname', 'lastname', 'vacState', 'vac', 'date'];
+        $vacStates = ['ungeimpft', 'erste Impfung erhalten', 'durchgeimpft'];
+        $vaccines = [
+            'BioNTech',
+            'Moderna',
+            'AstraZeneca',
+            'Johnson&Johnson',
+        ];
+        foreach ($requiredKeys as $key) {
+            if (empty($data[$key])) {
+                return $this->getResponseStream(
+                    ['error' => "required key $key is not set."]
+                );
+            }
+        }
+        $vacState = $data['vacState'];
+        if (!in_array($vacState, $vacStates)) {
+            return $this->getResponseStream(
+                ['error' => "invalid vacState: $vacState"]
+            );
+        }
+        $vac = $data['vac'];
+        if (!in_array($vac, $vaccines)) {
+            return $this->getResponseStream(
+                ['error' => "invalid vaccine: $vac"]
+            );
+        }
+
+        $ticketReserver = $this->injector->getInstance(TicketReserver::class);
+        $owner = $data['firstname'] . ' ' . $data['lastname'];
+
+
+        $ticket = $ticketReserver->getReserved($owner);
+        if (!$ticket) {
+            $ticket = $ticketReserver->reserveTicket($owner);
+        }
+        if ($ticket) {
+            return $this->getResponseStream([
+                'ticket' => [
+                    'id' => $ticket->ticket_code,
+                    'date' => (string) new \Horde_Date($ticket->ticket_date, 'Europe/Berlin'),
+                    // TODO: should the vaccine even be decided here? Then it needs to be a field in the db.
+                    // Random for now
+                    'vac' => $vaccines[random_int(0, count($vaccines) - 1)],
+                ],
+            ]);
+        } else {
+            return $this->getResponseStream(
+                ['error' => _('Currently no available tickets')]
+            );
+        }
     }
 }
