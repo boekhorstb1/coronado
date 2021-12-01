@@ -30,6 +30,7 @@ class TicketReserver
     protected $slotsPerBlock;
     protected $minutesPerBlock;
     protected $hoursTotal;
+    protected $timezone = 'UTC';
 
     public function __construct(
         Horde_Db_Adapter $dba,
@@ -43,24 +44,34 @@ class TicketReserver
         $this->minutesPerBlock = intval(60 / self::BLOCK_PER_HOUR);
     }
 
-    public function meetsRequirements(string $vacState, string $lastVaccine, Horde_Date $dateOfLastVaccine)
+    public function setTimezone(string $timezone)
     {
-        $now = new Horde_Date(time());
+        $this->timezone = $timezone;
+    }
+
+    protected function getHordeDate($param): Horde_Date
+    {
+        return new Horde_Date($param, $this->timezone);
+    }
+
+    public function meetsRequirements(string $vacState, string $lastVaccine, Horde_Date $lastVaccination)
+    {
+        $now = $this->getHordeDate(time());
         if ($vacState === self::VAC_STATES[0]) {
             return true;
         } elseif (
             $vacState === self::VAC_STATES[1]
-            && ($now->diff($dateOfLastVaccine) > 30 * 5)
+            && ($now->diff($lastVaccination) > 30 * 5)
         ) {
             return true;
         } elseif (
             $vacState === self::VAC_STATES[2]
-            && ($now->diff($dateOfLastVaccine) > 30 * 5)
+            && ($now->diff($lastVaccination) > 30 * 5)
         ) {
             return true;
         } elseif (
             $lastVaccine === self::VACCINES[3]
-            && ($now->diff($dateOfLastVaccine) > 28)
+            && ($now->diff($lastVaccination) > 28)
         ) {
             return true;
         }
@@ -85,20 +96,18 @@ class TicketReserver
         return $ticket;
     }
 
-    protected function getStartDate()
+    protected function getStartDate(): Horde_Date
     {
-        $date = (new Horde_Date(time()))->add(['day' => 1]);
+        $date = $this->getHordeDate(time())->add(['day' => 1]);
         $date->hour = self::HOUR_START;
         $date->min = 0;
         $date->sec = 0;
-        //     keys 'year', 'month', 'mday', 'day'
-        //  *   'hour', 'min', 'minute', 'sec'
         return $date;
     }
 
-    protected function getEndDate()
+    protected function getEndDate(): Horde_Date
     {
-        $date = (new Horde_Date(time()))->add(['day' => 1]);
+        $date = $this->getHordeDate(time())->add(['day' => 1]);
         $date->hour = self::HOUR_STOP;
         $date->min = 0;
         $date->sec = 0;

@@ -86,16 +86,20 @@ class RestGetTicket extends RestBase
             );
         }
 
-        $date = $data['date'];
-        if (!is_int($date)) {
+        $date = intval($data['date']);
+        if (!$date) {
             return $this->getResponseStream(
-                ['error' => 'expected date to be timestamp']
+                ['error' => 'expected date to be a timestamp']
             );
         }
 
-        $date = new Horde_Date($date);
+        $timezone = $data['timezone'] ?? 'UTC';
+
+        $date = new Horde_Date($date, $timezone);
 
         $ticketReserver = $this->injector->getInstance(TicketReserver::class);
+        $ticketReserver->setTimezone($timezone);
+
         // not used currently
         $owner = $data['firstname'] . ' ' . $data['lastname'];
 

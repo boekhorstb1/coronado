@@ -1,5 +1,7 @@
 <?php
+
 namespace Horde\Coronado;
+
 use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 
@@ -28,7 +30,7 @@ $mapper->connect(
     'Index',
     '/*path',
     [
-        'controller' => Ui\PublicUi::class,
+        'controller' => Ui\RequestTicketUi::class,
         'stack' => []
     ]
 );
