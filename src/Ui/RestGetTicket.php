@@ -64,7 +64,7 @@ class RestGetTicket extends RestBase
                 ['error' => 'request body is not valid json']
             );
         }
-        $requiredKeys = ['firstname', 'lastname', 'vacState', 'vac', 'date'];
+        $requiredKeys = ['firstname', 'lastname', 'vacState', 'vac', 'date', 'timezone'];
 
         foreach ($requiredKeys as $key) {
             if (empty($data[$key])) {

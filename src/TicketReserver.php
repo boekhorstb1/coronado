@@ -61,17 +61,17 @@ class TicketReserver
             return true;
         } elseif (
             $vacState === self::VAC_STATES[1]
-            && ($now->diff($lastVaccination) > 30 * 5)
+            && ($now->diff($lastVaccination) >= 28)
         ) {
             return true;
         } elseif (
             $vacState === self::VAC_STATES[2]
-            && ($now->diff($lastVaccination) > 30 * 5)
+            && ($now->diff($lastVaccination) >= 30 * 5)
         ) {
             return true;
         } elseif (
             $lastVaccine === self::VACCINES[3]
-            && ($now->diff($lastVaccination) > 28)
+            && ($now->diff($lastVaccination) >= 28)
         ) {
             return true;
         }
@@ -124,7 +124,7 @@ class TicketReserver
             if ($c < $this->slotsPerBlock) {
                 return $date;
             }
-            $date = $date->add(['minutes' => $this->minutesPerBlock]);
+            $date = $date->add(['min' => $this->minutesPerBlock]);
         }
         return null;
     }
