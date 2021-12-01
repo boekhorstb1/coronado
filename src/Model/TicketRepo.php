@@ -6,7 +6,7 @@ use Horde_Date;
 
 class TicketRepo extends TicketMapper
 {
-    public function getByCode(string $code): Ticket
+    public function getByCode(string $code): ?Ticket
     {
         return $this->findOne(['ticket_code' => $code]);
     }
@@ -19,7 +19,7 @@ class TicketRepo extends TicketMapper
         return $tickets;
     }
 
-    public function createTicket(string $owner, Horde_Date $date)
+    public function createTicket(Horde_Date $date, string $owner = '')
     {
         function genCode()
         {
@@ -37,11 +37,10 @@ class TicketRepo extends TicketMapper
         while ($this->getByCode($code)) {
             $code = genCode();
         }
-
         $ticket = $this->create([
             'ticket_code' => $code,
             'ticket_owner' => $owner,
-            'ticket_date' => $date->datestamp(),
+            'ticket_date' => $date->timestamp(),
         ]);
         return $ticket;
     }

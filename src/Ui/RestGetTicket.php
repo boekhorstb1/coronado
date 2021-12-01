@@ -30,17 +30,25 @@ use Horde\Coronado\CoronadoException;
 use Horde_Registry;
 use Horde_Session;
 use Horde\Log\Logger;
+use Horde_Date;
 
 /**
  * Controller class for Public UI
  */
 class RestGetTicket extends RestBase
 {
-    protected function getResponseStream(array $data)
+    /**
+     * Returns the json encoded data as a response stream.
+     */
+    protected function getResponseStream(array $data): ?StreamInterface
     {
         return $this->streamFactory->createStream(json_encode($data));
     }
 
+    /**
+     * Parse the request body as json. Checks if all values are present and valid.
+     * If the requester is eligible for a vaccination, reserve an available ticket and return it.
+     */
     protected function buildResponseStream(ServerRequestInterface $request): ?StreamInterface
     {
         $method = $request->getMethod();
@@ -51,14 +59,13 @@ class RestGetTicket extends RestBase
         }
         $body = $request->getBody()->getContents();
         $data = json_decode($body, true);
+        if (is_null($data)) {
+            return $this->getResponseStream(
+                ['error' => 'request body is not valid json']
+            );
+        }
         $requiredKeys = ['firstname', 'lastname', 'vacState', 'vac', 'date'];
-        $vacStates = ['ungeimpft', 'erste Impfung erhalten', 'durchgeimpft'];
-        $vaccines = [
-            'BioNTech',
-            'Moderna',
-            'AstraZeneca',
-            'Johnson&Johnson',
-        ];
+
         foreach ($requiredKeys as $key) {
             if (empty($data[$key])) {
                 return $this->getResponseStream(
@@ -67,40 +74,52 @@ class RestGetTicket extends RestBase
             }
         }
         $vacState = $data['vacState'];
-        if (!in_array($vacState, $vacStates)) {
+        if (!in_array($vacState, TicketReserver::VAC_STATES)) {
             return $this->getResponseStream(
                 ['error' => "invalid vacState: $vacState"]
             );
         }
         $vac = $data['vac'];
-        if (!in_array($vac, $vaccines)) {
+        if (!in_array($vac, TicketReserver::VACCINES)) {
             return $this->getResponseStream(
                 ['error' => "invalid vaccine: $vac"]
             );
         }
 
+        $date = $data['date'];
+        if (!is_int($date)) {
+            return $this->getResponseStream(
+                ['error' => 'expected date to be timestamp']
+            );
+        }
+
+        $date = new Horde_Date($date);
+
         $ticketReserver = $this->injector->getInstance(TicketReserver::class);
+        // not used currently
         $owner = $data['firstname'] . ' ' . $data['lastname'];
 
 
-        $ticket = $ticketReserver->getReserved($owner);
-        if (!$ticket) {
-            $ticket = $ticketReserver->reserveTicket($owner);
+        if (!$ticketReserver->meetsRequirements($vacState, $vac, $date)) {
+            return $this->getResponseStream(
+                ['error' => _('You currently do not meet the requirements for a new vaccination')]
+            );
         }
-        if ($ticket) {
-            return $this->getResponseStream([
-                'ticket' => [
-                    'id' => $ticket->ticket_code,
-                    'date' => (string) new \Horde_Date($ticket->ticket_date, 'Europe/Berlin'),
-                    // TODO: should the vaccine even be decided here? Then it needs to be a field in the db.
-                    // Random for now
-                    'vac' => $vaccines[random_int(0, count($vaccines) - 1)],
-                ],
-            ]);
-        } else {
+
+        $ticket = $ticketReserver->reserveTicket();
+        if (!$ticket) {
             return $this->getResponseStream(
                 ['error' => _('Currently no available tickets')]
             );
         }
+        return $this->getResponseStream([
+            'ticket' => [
+                'id' => $ticket->ticket_code,
+                'date' => $ticket->ticket_date,
+                // TODO: should the vaccine even be decided here? Then it needs to be a field in the db.
+                // Random for now
+                // 'vac' => $vaccines[random_int(0, count($vaccines) - 1)],
+            ],
+        ]);
     }
 }

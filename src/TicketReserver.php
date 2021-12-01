@@ -11,8 +11,25 @@ use Horde\Coronado\Model\Ticket;
 
 class TicketReserver
 {
+    protected const HOUR_START = 10;
+    protected const HOUR_STOP = 16;
+    protected const BLOCK_PER_HOUR = 2;
+    protected const MAX_SLOTS = 300;
+    public const VAC_STATES = ['ungeimpft', 'erste Impfung erhalten', 'durchgeimpft'];
+    public const VACCINES = [
+        'BioNTech',
+        'Moderna',
+        'AstraZeneca',
+        'Johnson&Johnson',
+    ];
+
     protected Horde_Db_Adapter $dba;
     protected TicketRepo $ticketRepo;
+
+    protected $blocks;
+    protected $slotsPerBlock;
+    protected $minutesPerBlock;
+    protected $hoursTotal;
 
     public function __construct(
         Horde_Db_Adapter $dba,
@@ -20,6 +37,34 @@ class TicketReserver
     ) {
         $this->dba = $dba;
         $this->ticketRepo = $ticketRepo;
+        $this->hoursTotal = self::HOUR_STOP - self::HOUR_START;
+        $this->blocks = $this->hoursTotal * self::BLOCK_PER_HOUR;
+        $this->slotsPerBlock = intval(self::MAX_SLOTS / $this->blocks);
+        $this->minutesPerBlock = intval(60 / self::BLOCK_PER_HOUR);
+    }
+
+    public function meetsRequirements(string $vacState, string $lastVaccine, Horde_Date $dateOfLastVaccine)
+    {
+        $now = new Horde_Date(time());
+        if ($vacState === self::VAC_STATES[0]) {
+            return true;
+        } elseif (
+            $vacState === self::VAC_STATES[1]
+            && ($now->diff($dateOfLastVaccine) > 30 * 5)
+        ) {
+            return true;
+        } elseif (
+            $vacState === self::VAC_STATES[2]
+            && ($now->diff($dateOfLastVaccine) > 30 * 5)
+        ) {
+            return true;
+        } elseif (
+            $lastVaccine === self::VACCINES[3]
+            && ($now->diff($dateOfLastVaccine) > 28)
+        ) {
+            return true;
+        }
+        return false;
     }
 
     public function getReserved($owner): ?Ticket
@@ -40,14 +85,47 @@ class TicketReserver
         return $ticket;
     }
 
-    public function reserveTicket($owner): ?Ticket
+    protected function getStartDate()
     {
-        $earliest = (new Horde_Date())->add(['hour' => 4]);
-        $sql = 'UPDATE coronado_tickets SET ticket_owner=? WHERE ticket_owner="" AND ticket_date > ? LIMIT 1';
-        $result = $this->dba->update($sql, [$owner, $earliest]);
-        if ($result > 0) {
-            return $this->getReserved($owner);
+        $date = (new Horde_Date(time()))->add(['day' => 1]);
+        $date->hour = self::HOUR_START;
+        $date->min = 0;
+        $date->sec = 0;
+        //     keys 'year', 'month', 'mday', 'day'
+        //  *   'hour', 'min', 'minute', 'sec'
+        return $date;
+    }
+
+    protected function getEndDate()
+    {
+        $date = (new Horde_Date(time()))->add(['day' => 1]);
+        $date->hour = self::HOUR_STOP;
+        $date->min = 0;
+        $date->sec = 0;
+        return $date;
+    }
+
+    public function getNextAvailableTimeSlot(): ?Horde_Date
+    {
+        $date = $this->getStartDate();
+        $endTs = $this->getEndDate()->timestamp();
+
+        while ($date->timestamp() < $endTs) {
+            $c = count($this->ticketRepo->find(['ticket_date' => $date->timestamp()]));
+            if ($c < $this->slotsPerBlock) {
+                return $date;
+            }
+            $date = $date->add(['minutes' => $this->minutesPerBlock]);
         }
         return null;
+    }
+
+    public function reserveTicket(): ?Ticket
+    {
+        $date = $this->getNextAvailableTimeSlot();
+        if (is_null($date)) {
+            return null;
+        }
+        return $this->ticketRepo->createTicket($date);
     }
 }
