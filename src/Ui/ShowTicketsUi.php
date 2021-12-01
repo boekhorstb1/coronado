@@ -1,17 +1,21 @@
 <?php
+
 /**
  * Coronado Public UI
  *
  * This is the page where the anonymous user adds data to generate his ticket.
  */
+
 declare(strict_types=1);
 
 namespace Horde\Coronado\Ui;
 
 use Horde\Injector\Injector;
+
 /**
  * The standard PSR-7/PSR-15/PSR-17 fare.
  */
+
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
@@ -32,7 +36,7 @@ use Psr\Http\Message\StreamInterface;
 /**
  * Controller class for Public UI
  */
-class PublicUi implements MiddlewareInterface
+class ShowTicketsUi implements MiddlewareInterface
 {
     protected ResponseFactoryInterface $responseFactory;
     protected StreamFactoryInterface $streamFactory;
@@ -129,45 +133,24 @@ class PublicUi implements MiddlewareInterface
 
     protected function buildResponseStream(ServerRequestInterface $request): ?StreamInterface
     {
-        // This is literally the list.php content, only adopted as needed
+        global $prefs;
+        $session = $this->injector->getInstance(\Horde_Session::class);
+        $registry = $this->injector->getInstance(\Horde_Registry::class);
 
-        // Capture any output. This allows us to use the legacy Page_Output
-        // Also, we prevent leaking any unintended output before the headers are sent
-        ob_start();
-        // This is literally the list.php content, only adopted as needed
-        $page_output = $this->page_output;
-        $view = $this->view;
-        $view->header = _("Header");
-        $view->content = _("Some Content");
-        $view->list = [
-            ['One', 'Foo'],
-            ['Two', 'Bar'],
+        $jsGlobalsHorde = [
+            'appMode' => 'horde',
+            'sessionToken' => $session->getToken(),
+            'currentApp' => $registry->getApp(),
+            'userUid' => $registry->getAuth(),
+            'apps' => $registry->listApps(null, true),
+            // TODO: Apps always show their English name
+            'appWebroot' => preg_replace('/[^\/]*\/\.\.\/?/', '', $registry->get('webroot', 'coronado')),
         ];
+        $this->view->addTemplatePath(CORONADO_TEMPLATES);
+        $this->view->jsGlobalsHorde = json_encode($jsGlobalsHorde);
+        $output = $this->view->render('react-init');
+        return $this->streamFactory->createStream($output);
 
-        /* Load JavaScript for sortable table. */
-        $page_output->addScriptFile('tables.js', 'horde');
-
-        /* Here starts the actual page output. First we output the complete HTML
-            * header, CSS files, the topbar menu, and the sidebar menu. */
-        $page_output->header([
-            'title' => _("List"),
-        ]);
-
-        /* Next we output any notification messages. This is not done automatically
-            * because on some pages you might not want to have notifications. */
-        $this->notification->notify(['listeners' => 'status']);
-
-        /* Here goes the actual content of your application's page. This could be
-            * Horde_View output, a rendered Horde_Form, or any other arbitrary HTML
-            * output. */
-        echo $view->render('list');
-
-        /* Finally the HTML content is closed and JavaScript files are loaded. */
-        $page_output->footer();
-        $content = ob_get_contents();
-        if ($content) {
-            return $this->streamFactory->createStream($content);
-        }
         throw new CoronadoException('Could not render page');
     }
 

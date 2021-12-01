@@ -1,9 +1,9 @@
 <?php
 
 /**
- * Coronado REST
+ * Coronado Public UI
  *
- * This is the base class for REST calls
+ * This is the page where the anonymous user adds data to generate his ticket.
  */
 
 declare(strict_types=1);
@@ -17,28 +17,35 @@ use Horde\Injector\Injector;
  */
 
 use Psr\Http\Message\ServerRequestInterface;
-use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
-use Psr\Http\Message\StreamInterface;
+use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\StreamFactoryInterface;
 use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use Horde\Coronado\CoronadoException;
-use Horde_Session;
+use Horde_PageOutput;
 use Horde_Registry;
+use Horde_Session;
+use Horde_View;
+use Horde_View_Base;
 use Horde\Log\Logger;
+use Horde_Notification;
+use Horde_Notification_Handler;
+use Psr\Http\Message\StreamInterface;
 
 /**
- * Abstract Controller class for REST
- * Implement rest class by inheriting from this (DRY)
+ * Controller class for Public UI
  */
-abstract class RestBase implements MiddlewareInterface
+class RequestTicketUi implements MiddlewareInterface
 {
     protected ResponseFactoryInterface $responseFactory;
     protected StreamFactoryInterface $streamFactory;
     protected Injector $injector;
     protected Horde_Session $session;
     protected Horde_Registry $registry;
+    protected Horde_PageOutput $page_output;
+    protected Horde_View $view;
+    protected Horde_Notification_Handler $notification;
     protected Logger $logger;
 
     /**
@@ -52,6 +59,8 @@ abstract class RestBase implements MiddlewareInterface
      * @param Injector $injector
      * @param Horde_Registry $registry
      * @param Horde_Session $session
+     * @param Horde_PageOutput $page_output
+     * @param Horde_View $view
      * @param Logger $logger
      */
     public function __construct(
@@ -60,6 +69,9 @@ abstract class RestBase implements MiddlewareInterface
         Injector $injector,
         Horde_Registry $registry,
         Horde_Session $session,
+        Horde_PageOutput $page_output,
+        Horde_View_Base $view,
+        Horde_Notification_Handler $notification,
         Logger $logger
     ) {
         $this->responseFactory = $responseFactory;
@@ -116,31 +128,34 @@ abstract class RestBase implements MiddlewareInterface
                 return $handler->handle($request);
             }
         }
-        return $this->responseFactory->createResponse($returnCode)
-            ->withBody($stream)
-            ->withHeader('Content-Type', 'application/json')
-            ->withHeader('Accept', 'application/json');
+        return $this->responseFactory->createResponse($returnCode)->withBody($stream);
     }
 
-    /**
-     * Overload this method for actually implementing stuff
-     *
-     * Quick & Dirty: Use $this->injector to get application services
-     * Proper: Overload and amend constructor
-     */
     protected function buildResponseStream(ServerRequestInterface $request): ?StreamInterface
     {
-        $content = json_encode([
-            'dummy' => 'data'
-        ]);
-        if ($content) {
-            return $this->streamFactory->createStream($content);
-        }
-        throw new CoronadoException('Could not render rest output');
+        global $prefs;
+        $session = $this->injector->getInstance(\Horde_Session::class);
+        $registry = $this->injector->getInstance(\Horde_Registry::class);
+
+        $jsGlobalsHorde = [
+            'appMode' => 'horde',
+            'sessionToken' => $session->getToken(),
+            'currentApp' => $registry->getApp(),
+            'userUid' => $registry->getAuth(),
+            'apps' => $registry->listApps(null, true),
+            // TODO: Apps always show their English name
+            'appWebroot' => preg_replace('/[^\/]*\/\.\.\/?/', '', $registry->get('webroot', 'coronado')),
+        ];
+        $this->view->addTemplatePath(CORONADO_TEMPLATES);
+        $this->view->jsGlobalsHorde = json_encode($jsGlobalsHorde);
+        $output = $this->view->render('react-init');
+        return $this->streamFactory->createStream($output);
+
+        throw new CoronadoException('Could not render page');
     }
 
     protected function handleNativeException(CoronadoException $e, $request): ?StreamInterface
     {
-        return $this->streamFactory->createStream("An error occured: $e");
+        return $this->streamFactory->createStream('An error occured: ');
     }
 }
