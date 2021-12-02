@@ -10,8 +10,7 @@
  * @license  http://www.horde.org/licenses/gpl GPL
  * @package  Coronado
  */
-namespace Horde\Coronado;
-use Horde_Test;
+
 /**
  * This class provides the application configuration for the test script.
  *
@@ -21,7 +20,7 @@ use Horde_Test;
  * @license   http://www.horde.org/licenses/gpl GPL
  * @package   Coronado
  */
-class Test extends Horde_Test
+class Coronado_Test extends Horde_Test
 {
     /**
      * The module list
@@ -63,9 +62,8 @@ class Test extends Horde_Test
      *
      * @return string  HTML output.
      */
-    public function appTests(): string
+    public function appTests()
     {
-        return '';
     }
 
 }
